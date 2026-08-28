@@ -1,0 +1,51 @@
+{
+  "name": "next-game-desktop",
+  "version": "1.0.0",
+  "description": "NEXT GAME — aplicativo de desktop (Windows/Mac/Linux). Abre a plataforma NEXT GAME (bluegames-nextgame.onrender.com) numa janela própria, com ícone, notificações nativas e sem barra de endereço do navegador.",
+  "main": "main.js",
+  "author": "Blue Sports Games",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bluesportsgames.nextgame",
+    "productName": "NEXT GAME",
+    "icon": "build/icon.png",
+    "files": [
+      "main.js",
+      "preload.js",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.png",
+      "artifactName": "NEXT-GAME-Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NEXT GAME"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "build/icon.png",
+      "category": "public.app-category.social-networking"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "build/icon.png",
+      "category": "Game"
+    }
+  }
+}
