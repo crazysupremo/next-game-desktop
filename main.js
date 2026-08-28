@@ -11,6 +11,23 @@ const path = require('path');
 const NEXT_GAME_URL = process.env.NEXT_GAME_URL || 'https://bluegames-nextgame.onrender.com';
 
 let mainWindow = null;
+let loadRetryCount = 0;
+let sawRealSite = false; // vira true assim que o NEXT GAME carrega de verdade pelo menos uma vez
+
+// Troca o texto da tela de carregamento sem precisar de IPC — só executa um
+// pedacinho de JS na página local que já está aberta.
+function setLoadingStatus(text) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents
+    .executeJavaScript(
+      `(function(){ var el = document.getElementById('status'); if (el) el.textContent = ${JSON.stringify(text)}; })()`
+    )
+    .catch(() => {});
+}
+
+function loadNextGame() {
+  mainWindow.loadURL(NEXT_GAME_URL).catch(() => {});
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -21,6 +38,7 @@ function createWindow() {
     title: 'NEXT GAME',
     icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#05070d',
+    show: false, // só mostra a janela quando já tiver algo pra mostrar — evita o flash de tela preta
     autoHideMenuBar: true, // some a barra de menu (Arquivo/Editar/...) — só aparece com Alt, fica mais "app" e menos "navegador"
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -32,7 +50,41 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL(NEXT_GAME_URL);
+  // Tela de carregamento local (instantânea, não depende de internet) pra
+  // nunca aparecer tela preta/branca — só depois disso é que tenta o site
+  // de verdade. Assim que ela pintar a primeira vez, mostra a janela.
+  mainWindow.loadFile(path.join(__dirname, 'loading.html'));
+  mainWindow.once('ready-to-show', () => mainWindow.show());
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    const currentUrl = mainWindow.webContents.getURL();
+    if (currentUrl.startsWith('file://') && !sawRealSite) {
+      // Acabou de mostrar a tela de carregamento — agora sim tenta o site de verdade.
+      loadNextGame();
+    } else if (currentUrl.startsWith(NEXT_GAME_URL)) {
+      sawRealSite = true;
+      loadRetryCount = 0;
+    }
+  });
+
+  // Se o site ainda não respondeu (ex: primeira visita do dia, o serviço
+  // grátis do Render "dormindo" pode levar até um minuto pra acordar), tenta
+  // de novo sozinho em vez de deixar a pessoa numa tela preta/travada.
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, _desc, validatedUrl, isMainFrame) => {
+    if (!isMainFrame || sawRealSite) return;
+    if (errorCode === -3) return; // ERR_ABORTED — comum e inofensivo (ex: redirecionamento normal)
+    if (!validatedUrl || !validatedUrl.startsWith(NEXT_GAME_URL)) return;
+
+    loadRetryCount += 1;
+    if (loadRetryCount <= 2) {
+      setLoadingStatus('Conectando ao NEXT GAME...');
+    } else if (loadRetryCount <= 6) {
+      setLoadingStatus('Isso pode levar até 1 minuto na primeira vez (o servidor está acordando)...');
+    } else {
+      setLoadingStatus('Ainda tentando conectar — confira sua internet. Tentando de novo...');
+    }
+    setTimeout(loadNextGame, Math.min(3000 + loadRetryCount * 1500, 12000));
+  });
 
   // Links que abririam em nova aba (ex: SaferNet, documentação) abrem no
   // navegador padrão do sistema, não dentro do app — janela nova dentro do
