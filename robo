@@ -1,0 +1,42 @@
+name: Build NEXT GAME Desktop Installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar os arquivos do repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Gerar o instalador (.exe)
+        run: npm run dist:win
+
+      - name: Guardar o instalador como resultado do build
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXT-GAME-Setup
+          path: dist/NEXT-GAME-Setup.exe
+
+      - name: Publicar como Release (com link de download pronto)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: NEXT GAME Desktop v1.0.${{ github.run_number }}
+          files: dist/NEXT-GAME-Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
