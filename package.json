@@ -20,6 +20,7 @@
     "appId": "com.bluesportsgames.nextgame",
     "productName": "NEXT GAME",
     "icon": "build/icon.png",
+    "publish": null,
     "files": [
       "main.js",
       "preload.js",
