@@ -1,21 +1,3 @@
-// NEXT GAME Desktop — wrapper Electron.
-// Não reimplementa nada do NEXT GAME: só abre o site já publicado
-// (bluegames-nextgame.onrender.com) dentro de uma janela própria, sem barra
-// de endereço, com ícone, notificações nativas do sistema operacional e
-// atalhos de teclado — pra sensação de "app instalado", não navegador.
-const { app, BrowserWindow, Menu, shell, session } = require('electron');
-const path = require('path');
-
-// Pode trocar sem reempacotar o instalador, se um dia mudar de domínio —
-// só definir a variável de ambiente NEXT_GAME_URL antes de abrir o app.
-const NEXT_GAME_URL = process.env.NEXT_GAME_URL || 'https://bluegames-nextgame.onrender.com';
-
-let mainWindow = null;
-let loadRetryCount = 0;
-let sawRealSite = false; // vira true assim que o NEXT GAME carrega de verdade pelo menos uma vez
-
-// Troca o texto da tela de carregamento sem precisar de IPC — só executa um
-// pedacinho de JS na página local que já está aberta.
 function setLoadingStatus(text) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents
